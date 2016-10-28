@@ -1,0 +1,21 @@
+body {
+    margin: 0 auto;
+    padding: 0;
+}
+
+/*
+ * ANGULAR LOADING BAR:: override the default CSS
+ */
+#loading-bar .bar {
+  background: #349ced;
+}
+#loading-bar-spinner .spinner-icon {
+  border-top-color:  #349ced;
+  border-left-color: #349ced;
+}
+#loading-bar .peg {
+  -moz-box-shadow: #349ced 1px 0 6px 1px;
+  -ms-box-shadow: #349ced 1px 0 6px 1px;
+  -webkit-box-shadow: #349ced 1px 0 6px 1px;
+  box-shadow: #349ced 1px 0 6px 1px;
+}
