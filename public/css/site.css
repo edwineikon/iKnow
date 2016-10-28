@@ -1,6 +1,9 @@
 body {
     margin: 0 auto;
     padding: 0;
+	
+	background-image: url('../../public/img/background_bpjstk.jpg');
+	/*background-image:{{ URL::('public/img/background_bpjstk.jpg') }}*/
 }
 
 /*
@@ -18,4 +21,12 @@ body {
   -ms-box-shadow: #349ced 1px 0 6px 1px;
   -webkit-box-shadow: #349ced 1px 0 6px 1px;
   box-shadow: #349ced 1px 0 6px 1px;
+}
+#coba {
+	background-color:white;
+	margin-top:20%;
+	margin-bottom:20%;
+	padding-bottom:4%;
+	padding-top:4%;
+	border-radius: 10px;
 }
