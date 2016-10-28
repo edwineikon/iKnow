@@ -92,7 +92,12 @@ class LoginSSOController extends Controller
             return view('login', ['logindata' => $data]);
         }
     }
-
+    
+    /**
+    * Check authentication.
+    *
+    * @param Request $request web request.
+    */
     protected function _authcheck(Request $request)
     {
         $domain = config('sso.primarydomain');
