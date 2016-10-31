@@ -2,29 +2,32 @@
 
 namespace App\Helpers;
 
-include __DIR__.'/../libraries/VivOAuthIMAP/VivOAuthIMAP.php';
-include __DIR__.'/../libraries/VivOAuthIMAP/lib/mime_parser.php';
-include __DIR__.'/../libraries/VivOAuthIMAP/lib/rfc822_addresses.php';
-include __DIR__.'/../libraries/xmlseclibs/xmlseclibs_helper.php';
+use PhpImap\Mailbox as ImapMailbox;
+use PhpImap\IncomingMail;
+use PhpImap\IncomingMailAttachment;
 
 class MasterSSO
 {
     // fungsi untuk authentikasi user menggunakan IMAP
 	public function authenticationImap(array $prop)
     {
-		$imap           = new VivOAuthIMAP();
-        $imap->host     = 'ssl://imap.gmail.com';
-        $imap->port     = 993;
-        $imap->username = $prop['username'];
-        $imap->password = $prop['password'];
+        $mailbox = new ImapMailbox('{imap.gmail.com:993/imap/ssl}INBOX', $prop['username'], $prop['password'], __DIR__);
 
-        if ($imap->login())
+        try
         {
-        	return true;
+            // Read all messaged into an array:
+            $mailsIds = $mailbox->searchMailbox('ALL');
+            if(!$mailsIds) {
+                die('Mailbox is empty');
+            }
+
+            // Get the first message and save its attachment(s) to disk:
+            $mail = $mailbox->getMail($mailsIds[0]);
+            return true;
         }
-        else
+        catch (\Exception $e)
         {
-        	return false;
+            return false;
         }
 	}
 
@@ -32,45 +35,45 @@ class MasterSSO
     public function getSAMLResponse($SAMLRequest, $loginEmail)
     {
         //get certificate & privatekey from db 
-        $certificate  = '-----BEGIN CERTIFICATE-----
-                        MIIEBzCCA3CgAwIBAgIJAOOe4Yr2d1YwMA0GCSqGSIb3DQEBBQUAMIG0MQswCQYD
-                        VQQGEwJJRDETMBEGA1UECBMKSmF3YSBUaW11cjERMA8GA1UEBxMIU3VyYWJheWEx
-                        EjAQBgNVBAoTCVNTTyBFSUtPTjEdMBsGA1UECxMURUlLT04gVGVjaG5vbG9neSwg
-                        UFQxFjAUBgNVBAMTDW1hc3RlcnNzby5kZXYxMjAwBgkqhkiG9w0BCQEWI2plcHJp
-                        LnN1Z2loYXJ0b0BlaWtvbnRlY2hub2xvZ3kuY29tMB4XDTE1MDgxMDAyMjgxNloX
-                        DTE2MDgwOTAyMjgxNlowgbQxCzAJBgNVBAYTAklEMRMwEQYDVQQIEwpKYXdhIFRp
-                        bXVyMREwDwYDVQQHEwhTdXJhYmF5YTESMBAGA1UEChMJU1NPIEVJS09OMR0wGwYD
-                        VQQLExRFSUtPTiBUZWNobm9sb2d5LCBQVDEWMBQGA1UEAxMNbWFzdGVyc3NvLmRl
-                        djEyMDAGCSqGSIb3DQEJARYjamVwcmkuc3VnaWhhcnRvQGVpa29udGVjaG5vbG9n
-                        eS5jb20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMukbvcCkTsYaHfKX/Ko
-                        yVZ6slGXIoME0yPLmLGdTsfGNQDx96KdHZmDXtDfJtvEz8GXUdrty0zobkdTJ4w3
-                        D34evsPerbQImzER0VNhYB5YUyUzKJ6tB8MZ2QxJ4fMPT4LmpCRwlkgg9pnm0z41
-                        uk59sO/SYZ3HyJlxaZ9YXn+pAgMBAAGjggEdMIIBGTAdBgNVHQ4EFgQUvjHcwtMG
-                        jqsxdaYK3svYiX21voMwgekGA1UdIwSB4TCB3oAUvjHcwtMGjqsxdaYK3svYiX21
-                        voOhgbqkgbcwgbQxCzAJBgNVBAYTAklEMRMwEQYDVQQIEwpKYXdhIFRpbXVyMREw
-                        DwYDVQQHEwhTdXJhYmF5YTESMBAGA1UEChMJU1NPIEVJS09OMR0wGwYDVQQLExRF
-                        SUtPTiBUZWNobm9sb2d5LCBQVDEWMBQGA1UEAxMNbWFzdGVyc3NvLmRldjEyMDAG
-                        CSqGSIb3DQEJARYjamVwcmkuc3VnaWhhcnRvQGVpa29udGVjaG5vbG9neS5jb22C
-                        CQDjnuGK9ndWMDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4GBAEYTlXoO
-                        2jHj+FcU6W0PagSab8v2yRT//By+ktUZGK8dpfBwajReDvWB6UUpkTrqPRtNXCya
-                        c7NW07GkW6xpFlosVYUVdhAl7TqMpcK7jv9O/tsfdCXWKMfHFGaPQFqC8RSKjJrq
-                        h0VqYWYkFXvSpQNfTQfwtTvE+azgpxbddGim
-                        -----END CERTIFICATE-----';
-        $privatekey   = '-----BEGIN RSA PRIVATE KEY-----
-                        MIICXgIBAAKBgQDLpG73ApE7GGh3yl/yqMlWerJRlyKDBNMjy5ixnU7HxjUA8fei
-                        nR2Zg17Q3ybbxM/Bl1Ha7ctM6G5HUyeMNw9+Hr7D3q20CJsxEdFTYWAeWFMlMyie
-                        rQfDGdkMSeHzD0+C5qQkcJZIIPaZ5tM+NbpOfbDv0mGdx8iZcWmfWF5/qQIDAQAB
-                        AoGAEzGXZ96tE5XUWt4PNw7jkywTXI9TKGgvAmOxK6R5BWlQG5uyzHfkj1CLgkJW
-                        JkahkkyR4YGiNMh/hGd5BcU2x3AxDuve1L5UttC10XHCxYD/mLKo9MXVvFod44Zx
-                        IC8DmwTpvMnKr4xCpCjb0EyGMd007dUsiopnJoiO530s/VECQQD2qBVmU8d1HgRy
-                        SCZi/6lp0CqEGigNCI/EAXVvPp/lcPIFAmosSQVcFH6xqDwtpLhQ3QboI9vEImEk
-                        9KrSwlV1AkEA01s5rwa4bsrAZSgGQsq/9Hm1VlbOiVjrT8gFacJB9V5WLNJFX2L2
-                        o3iyVV8DgnK8nloFbJvZBJ2E8NjqknAW5QJBAJLqszRsGpYL9yILD7JQDhzUvT5K
-                        RijdPKTHKafFaYBEsiOBuLQAGo0qN/yh9JZLUu33eTG0iiZdQ/e7NDStRDECQQDD
-                        CAwrmVz5R3jQH2Xfnm4RL3oI6ON/VCEXprBwDgSFYf7NL186jPygjlCpfJqldjDd
-                        Qp58wTc6DgzNnqyeYnaNAkEAk/gKd+bUIQEGUNXTjgzROW7KuZnA0ezWj1sn8g4o
-                        uxyDeFV/v7epmLQhyWk9jdwKCY1wBbrx52CbNuhfZQsTHQ==
-                        -----END RSA PRIVATE KEY-----';
+        $certificate  = '
+-----BEGIN CERTIFICATE-----
+MIIDsjCCAxugAwIBAgIJALE61GLKsN04MA0GCSqGSIb3DQEBBQUAMIGYMQswCQYD
+VQQGEwJJRDESMBAGA1UECBMJRWFzdCBKYXZhMREwDwYDVQQHEwhTdXJhYmF5YTEN
+MAsGA1UEChMEQlBKUzENMAsGA1UECxMEQlBKUzESMBAGA1UEAxMJbG9jYWxob3N0
+MTAwLgYJKoZIhvcNAQkBFiFlZHdpbi5zeWFyaWVmQGVpa29udGVjaG5vbG9neS5j
+b20wHhcNMTYxMDMxMDYwNTM1WhcNMTcxMDMxMDYwNTM1WjCBmDELMAkGA1UEBhMC
+SUQxEjAQBgNVBAgTCUVhc3QgSmF2YTERMA8GA1UEBxMIU3VyYWJheWExDTALBgNV
+BAoTBEJQSlMxDTALBgNVBAsTBEJQSlMxEjAQBgNVBAMTCWxvY2FsaG9zdDEwMC4G
+CSqGSIb3DQEJARYhZWR3aW4uc3lhcmllZkBlaWtvbnRlY2hub2xvZ3kuY29tMIGf
+MA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgjli/fPt4+QXXcqjyXStmK2wt33NH
+XMJa8Lcu6uOAmLqOBiAZqTbB6sXQjtwPG+YnWsEpfmjzmmccPJ3KguDlyfA7pT6s
+cEaglNzF6uY+y61eyBJwG/J1Bw2vknHiP5Er15Rr53A2cW4MRYRKb0MzUp28nkad
+sC5jg6QoF9MFMQIDAQABo4IBADCB/TAdBgNVHQ4EFgQUnABDtR+thqFpyyHbzYrB
+yghlyMYwgc0GA1UdIwSBxTCBwoAUnABDtR+thqFpyyHbzYrByghlyMahgZ6kgZsw
+gZgxCzAJBgNVBAYTAklEMRIwEAYDVQQIEwlFYXN0IEphdmExETAPBgNVBAcTCFN1
+cmFiYXlhMQ0wCwYDVQQKEwRCUEpTMQ0wCwYDVQQLEwRCUEpTMRIwEAYDVQQDEwls
+b2NhbGhvc3QxMDAuBgkqhkiG9w0BCQEWIWVkd2luLnN5YXJpZWZAZWlrb250ZWNo
+bm9sb2d5LmNvbYIJALE61GLKsN04MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEF
+BQADgYEAJpvBuLe4Kxfk4wnPnQiUHzxZjQNONsYpQJji/yPXzSnJ2p/yvGkblAaU
+pOJo+RHsxQ0z3qTNLU8AS/bDQjzk1B5yfu9xmw/Bbc3Xs74ZlfKB3x4WahN2+uOV
+LgYmyq6zwjENVH8iGfteVhg7NHf/lIbtgm+asROZkZ4odTf98QI=
+-----END CERTIFICATE-----';
+        $privatekey   = '
+-----BEGIN RSA PRIVATE KEY-----
+MIICXQIBAAKBgQDgjli/fPt4+QXXcqjyXStmK2wt33NHXMJa8Lcu6uOAmLqOBiAZ
+qTbB6sXQjtwPG+YnWsEpfmjzmmccPJ3KguDlyfA7pT6scEaglNzF6uY+y61eyBJw
+G/J1Bw2vknHiP5Er15Rr53A2cW4MRYRKb0MzUp28nkadsC5jg6QoF9MFMQIDAQAB
+AoGAMPvcMCk7UfBAbfb9E6FvTiI6vub3ZqG9Y8kOrJVgezTVvRVo+zAGWda0wAHp
+zwHu+ra5XCvPCRStWWN/qCVUmWL2siE5NG6gA3jZ1lgMDXP2pkuyaWJJW7xeOc6k
+wMiXUFpdbljmp5GjWI+8PX49pcWAEEkccK+zmslSCvMzFeECQQD6pKA64En11B8H
+WjPZkSKTLGnvhEmJlbIDS6XfYvNrpPkTTIIMZRXGNLkrZwIvu/XhhM2O3llr7Y2N
+QRuTtga7AkEA5Vr81ORfL7sZiGamYF4JdCsa6QRjzTEaldhGfxT1wHAe95tGt0hu
+4cCpt5xmkv2kPmxZVfLDjDwQUrN7lupDAwJAAN85v3qwRy6pvPjPXV5n5GMvKyom
+p1fh+qj0tsY9Wo6EX1DQ0wI3BS2Bx2jgVRIuVM6FeI3Fed6ls2wakHT9qQJBAICK
+oAzI+TgNCmBR94km6vF6fxh9Z1nG3XmBvvDWVG1H6XMoSVfLdql7iyLmuu5CzVxW
+6TKsXkAoIZXYFbodDPUCQQD2CYtXaewqy5QpJTYb4prQZdO79xHmsoypV+s/zKUf
+GlOz0dzLCotJBvnlL2+Q4nfrbZN7GvQQjdI4qs8Q0hv0
+-----END RSA PRIVATE KEY-----';
                         
         $incoming = base64_decode($SAMLRequest);
         if(!$xml_string = gzinflate($incoming))
@@ -78,7 +81,7 @@ class MasterSSO
             $xml_string = $incoming;
         }
         
-        $xml = new DOMDocument();
+        $xml = new \DOMDocument();
         $xml->loadXML($xml_string);
         if($xml->hasChildNodes() && ($node = $xml->childNodes->item(0)))
         {
@@ -125,7 +128,7 @@ class MasterSSO
 
         $response_params['x509'] = $certificate;
 
-        $xml = new DOMDocument('1.0','utf-8');
+        $xml = new \DOMDocument('1.0','utf-8');
         $resp = $xml->createElementNS('urn:oasis:names:tc:SAML:2.0:protocol','samlp:Response');
 
         $resp->setAttribute('ID',$response_params['ID']);

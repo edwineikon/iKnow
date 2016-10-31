@@ -170,6 +170,7 @@ return [
         Collective\Html\HtmlServiceProvider::class,
         PulkitJalan\Google\GoogleServiceProvider::class,
         Ixudra\Curl\CurlServiceProvider::class,
+        Zalazdi\LaravelImap\Providers\LaravelServiceProvider::class,
         //
 
         /*
@@ -234,7 +235,8 @@ return [
         'Html' => Collective\Html\HtmlFacade::class,
         'Google' => PulkitJalan\Google\Facades\Google::class,
         'Curl' => Ixudra\Curl\Facades\Curl::class,
-        'CurlAn' => 'anlutro\cURL\Laravel\cURL'
+        'CurlAn' => 'anlutro\cURL\Laravel\cURL',
+        'Imap' => Zalazdi\LaravelImap\Facades\Client::class,
     ],
 
 ];

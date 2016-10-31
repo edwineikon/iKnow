@@ -15,7 +15,6 @@
     @yield('styles')
 </head>
 <body>
-    <div style="margin-top: 3.5em;">&nbsp;</div>
     @yield('content')
     
     <!-- Prerequisites JavaScripts -->

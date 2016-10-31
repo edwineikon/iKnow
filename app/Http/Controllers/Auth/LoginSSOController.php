@@ -13,7 +13,7 @@ class LoginSSOController extends Controller
         $method = $request->method();
         if ($request->isMethod('post'))
         {
-            $domain = $request->input('domain');
+            $domain = '@'.config('sso.primarydomain');
             $username = $request->input('username');
             $username = str_replace($domain, '', $username);
             $shortUsername = $username;
@@ -28,8 +28,9 @@ class LoginSSOController extends Controller
 
             if($resultSSOCheck)
             {
-                $samlResponse = $mastersso.getSAMLResponse(session('SAMLRequest'), $username);
-                $samlResponse['RelayState'] = session('RelayState');
+                $authenticationGoogle   = session('authenticationGoogle');
+                $samlResponse = $mastersso->getSAMLResponse($authenticationGoogle['SAMLRequest'], $username);
+                $samlResponse['RelayState'] = $authenticationGoogle['RelayState'];
 
                 /*
                 * Set BPJS login session
@@ -88,11 +89,19 @@ class LoginSSOController extends Controller
             }
 
             $data = $this->_authcheck($request);
+            if($data instanceof \Illuminate\Http\RedirectResponse)
+            {
+                return $data;
+            }
             return view('login', ['logindata' => $data, 'loginMessage' => 'Login Failed!']);
         }
         
         $data = $this->_authcheck($request);
-        return view('login', ['logindata' => $data]);
+        if($data instanceof \Illuminate\Http\RedirectResponse)
+        {
+            return $data;
+        }
+        return view('login', ['logindata' => $data, 'loginMessage' => '']);
     }
     
     /**
@@ -103,25 +112,33 @@ class LoginSSOController extends Controller
     protected function _authcheck(Request $request)
     {
         $domain = config('sso.primarydomain');
-        //$url_location           = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
-        $url_location = "https://script.google.com/macros/s/AKfycbzV0Lp2NJwG_7flcAQWJUDwo94NanIqI4Vm4iOO-f0EHsaUUO4/exec";
-        $SAMLRequest            = $request->input('SAMLRequest');
+        $url_location           = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
+        //$url_location = "https://script.google.com/macros/s/AKfycbzV0Lp2NJwG_7flcAQWJUDwo94NanIqI4Vm4iOO-f0EHsaUUO4/exec";
         $authenticationGoogle   = session('authenticationGoogle');
-
+        
         if(empty($authenticationGoogle))
         {
+            //print_r($_GET);exit;
             if(empty($request->input('SAMLRequest')) || empty($request->input('RelayState')))
             {
                 return redirect($url_location);
             }
             else
             {
-                $samlRelay = array(
-                    'SAMLRequest' => $request->input('SAMLRequest'),
-                    'RelayState'  => $request->input('RelayState'));
+                if(empty($authenticationGoogle))
+                {
+                    $samlRelay = array(
+                        'SAMLRequest' => $request->input('SAMLRequest'),
+                        'RelayState'  => $request->input('RelayState'));
 
-                session(['authenticationGoogle' => $samlRelay]);
-                return $samlRelay;
+                    session(['authenticationGoogle' => $samlRelay]);
+                    
+                    return redirect('login');
+                }
+                else
+                {
+                    return $authenticationGoogle;
+                }
             }
         }
 

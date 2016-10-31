@@ -11,7 +11,9 @@
         "laravelcollective/html": "^5.3",
         "pulkitjalan/google-apiclient": "^3.0",
         "ixudra/curl": "6.*",
-        "anlutro/curl": "1.4.*"
+        "anlutro/curl": "1.4.*",
+        "zalazdi/laravel-imap": "^1.0",
+        "php-imap/php-imap": "~2.0"
     },
     "require-dev": {
         "fzaninotto/faker": "~1.4",
