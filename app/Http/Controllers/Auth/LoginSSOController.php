@@ -16,6 +16,7 @@ class LoginSSOController extends Controller
             $domain = $request->input('domain');
             $username = $request->input('username');
             $username = str_replace($domain, '', $username);
+            $shortUsername = $username;
             $username = $username . $domain;
             $password = $request->input('password');
 
@@ -39,8 +40,8 @@ class LoginSSOController extends Controller
                     array(
                         'chId' => 'Eiken Google',
                         'invoke' => 'getLoginUsrPass',
-                        'username' => 'AG161790',
-                        'password' => 'WELCOME1' ));
+                        'username' => $shortUsername,
+                        'password' => $password ));
                         
                     $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
                     $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
@@ -50,7 +51,7 @@ class LoginSSOController extends Controller
                         array(
                             'chId' => 'Eiken Google',
                             'invoke' => 'getUserLoginInfo',
-                            'kodeUser' => 'AG161790'));
+                            'kodeUser' => $shortUsername));
                         $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
                         $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
                         if($validateResult == "Sukses")
