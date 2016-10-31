@@ -24,11 +24,12 @@ class LoginSSOController extends Controller
             $mastersso = new MasterSSO();
             $authSSO = array('username' => $username, 'password' => $password);
             $resultSSOCheck = $mastersso->authenticationImap($authSSO);
+            session(['LOGIN_VALIDATE_IMAP' => $resultSSOCheck]);
 
             if($resultSSOCheck)
             {
-                $isSSOAuthenticated = true;
-                session(["SSO_AUTH" => $isSSOAuthenticated]);
+                $samlResponse = $mastersso.getSAMLResponse(session('SAMLRequest'), $username);
+                $samlResponse['RelayState'] = session('RelayState');
 
                 /*
                 * Set BPJS login session
@@ -36,7 +37,7 @@ class LoginSSOController extends Controller
                 try
                 {
                     // validate user name password
-                    $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                    /*$response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
                     array(
                         'chId' => 'Eiken Google',
                         'invoke' => 'getLoginUsrPass',
@@ -66,7 +67,9 @@ class LoginSSOController extends Controller
                     else
                     {
                         // TODO : what to do when sso succeed, but return error from BPJS api
-                    }
+                    }*/
+                    
+                    return view('autosubmit', $samlResponse);
                 }
                 catch (Exception $e)
                 {
@@ -74,24 +77,22 @@ class LoginSSOController extends Controller
                     throw $e;
                 }
 
-                $authUrl = "auth/google";
+                // TODO: move this to page which called by redirect script
+                // -------------------------------------------------------
+                /*$authUrl = "auth/google";
                 $isOauthValid = session("OAUTH_VALID");
                 $isOauthValid = false;
                 session(["OAUTH_VALID" => $isOauthValid]);
+                return redirect($authUrl);*/
+                // -------------------------------------------------------
+            }
 
-                return redirect($authUrl);
-            }
-            else
-            {
-                $data = $this->_authcheck($request);
-                return view('login', ['logindata' => $data, 'loginMessage' => 'Login Failed!']);
-            }
-        }
-        else
-        {
             $data = $this->_authcheck($request);
-            return view('login', ['logindata' => $data]);
+            return view('login', ['logindata' => $data, 'loginMessage' => 'Login Failed!']);
         }
+        
+        $data = $this->_authcheck($request);
+        return view('login', ['logindata' => $data]);
     }
     
     /**
@@ -102,25 +103,26 @@ class LoginSSOController extends Controller
     protected function _authcheck(Request $request)
     {
         $domain = config('sso.primarydomain');
-        $url_location           = "https://mail.google.com/a/" . $domain;
+        //$url_location           = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
+        $url_location = "https://script.google.com/macros/s/AKfycbzV0Lp2NJwG_7flcAQWJUDwo94NanIqI4Vm4iOO-f0EHsaUUO4/exec";
         $SAMLRequest            = $request->input('SAMLRequest');
         $authenticationGoogle   = session('authenticationGoogle');
 
         if(empty($authenticationGoogle))
         {
-             if(empty($request->input('SAMLRequest')) || empty($request->input('RelayState')))
-             {
+            if(empty($request->input('SAMLRequest')) || empty($request->input('RelayState')))
+            {
                 return redirect($url_location);
-             }
-             else
-             {
+            }
+            else
+            {
                 $samlRelay = array(
                     'SAMLRequest' => $request->input('SAMLRequest'),
                     'RelayState'  => $request->input('RelayState'));
 
                 session(['authenticationGoogle' => $samlRelay]);
                 return $samlRelay;
-             }
+            }
         }
 
         return array('SAMLRequest' => $authenticationGoogle['SAMLRequest'],

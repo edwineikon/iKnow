@@ -18,11 +18,12 @@ class CheckGoogleAuth
      */
     public function handle($request, Closure $next)
     {
-        $ssoUrl = "/login";
+        $ssoUrl = "login";
         $authUrl = "auth/google";
 
         $isSSOAuthenticated = session("SSO_AUTH");
         $isOauthValid = session("OAUTH_VALID");
+        $isLoginValidateIMAP = session("LOGIN_VALIDATE_IMAP");
 
         if(empty($isSSOAuthenticated))
         {
@@ -36,7 +37,13 @@ class CheckGoogleAuth
             session(["OAUTH_VALID" => $isOauthValid]);
         }
 
-        if(!$isSSOAuthenticated)
+        if(empty($isLoginValidateIMAP))
+        {
+            $isLoginValidateIMAP = false;
+            session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+        }
+
+        if(!$isSSOAuthenticated && !$isLoginValidateIMAP)
         {
             $input = trim($request->input('data'));
             if(empty($input))

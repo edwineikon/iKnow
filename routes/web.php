@@ -16,7 +16,9 @@
 | Authentication Routes
 |--------------------------------------------------------------------------
 */
-Route::get('/login', 'Auth\LoginSSOController@login')->name('login');
+Route::get('login', 'Auth\LoginSSOController@login');
+Route::post('login', 'Auth\LoginSSOController@login');
+
 Route::get('auth/google', 'Auth\AuthController@redirectToGoogle')->middleware('checkgoogleauth');
 Route::get('auth/google/callback', 'Auth\AuthController@handleGoogleCallback');
 Route::get('auth/logout', 'Auth\AuthController@logout')->name('logout');

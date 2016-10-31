@@ -28,6 +28,7 @@ class AuthController extends Controller
     {
         $isSSOAuthenticated = session("SSO_AUTH");
         $isOauthValid = session("OAUTH_VALID");
+        $isLoginValidateIMAP = session("LOGIN_VALIDATE_IMAP");
 
         if(empty($isSSOAuthenticated))
         {
@@ -40,13 +41,25 @@ class AuthController extends Controller
             $isOauthValid = false;
             session(["OAUTH_VALID" => $isOauthValid]);
         }
-        
-        if(!$isSSOAuthenticated)
+
+        if(empty($isLoginValidateIMAP))
         {
-            return redirect("/login");
+            $isLoginValidateIMAP = false;
+            session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+        }
+        
+        if(!$isSSOAuthenticated && !$isLoginValidateIMAP)
+        {
+            return redirect("login");
         }
         else
         {
+            if ($isLoginValidateIMAP)
+            {
+                $isSSOAuthenticated = true;
+                session(["SSO_AUTH" => $isSSOAuthenticated]);
+            }
+
             if(!$isOauthValid)
             {
                 return Socialite::with('google')->scopes([
@@ -91,10 +104,14 @@ class AuthController extends Controller
             $isSSOAuthenticated = false;
             session(["SSO_AUTH" => $isSSOAuthenticated]);
 
+            $isLoginValidateIMAP = false;
+            session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+
             $isOauthValid = false;
             session(["OAUTH_VALID" => $isOauthValid]);
             session(["access_token" => ""]);
             session()->flush();
+
             return redirect($logoutUrl);
         }
     }
