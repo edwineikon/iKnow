@@ -3,10 +3,10 @@
 @section('content')
 <div class="container">
 	<div class="row">
-		<div class="col-md-3">
+		<div class="col-md-4">
 		</div>
 		<!-- LOGIN -->
-		<div id="coba" class="col-md-6">
+		<div id="coba" class="col-md-4">
 			<form action="{{ url('login') }}" method="post">
 				<div class="">
 					<img src="public/img/bpjs_logo600x140.png" class="img-responsive" alt="Cinque Terre">
@@ -31,7 +31,7 @@
 				</div>
 			</form>				
 		</div>
-		<div class="col-md-3">
+		<div class="col-md-4">
 		</div>
 	</div>
 </div>
