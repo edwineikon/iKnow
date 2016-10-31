@@ -17,9 +17,13 @@ class AuthController extends Controller
         $isSSOAuthenticated = false;
         session(["SSO_AUTH" => $isSSOAuthenticated]);
 
+        $isLoginValidateIMAP = false;
+        session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+
         $isOauthValid = false;
         session(["OAUTH_VALID" => $isOauthValid]);
         session(["access_token" => ""]);
+        session()->flush();
 
         return redirect($this->logoutUrl);
     }
@@ -112,7 +116,7 @@ class AuthController extends Controller
             session(["access_token" => ""]);
             session()->flush();
 
-            return redirect($logoutUrl);
+            return redirect($this->logoutUrl);
         }
     }
 }
