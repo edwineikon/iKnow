@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Helpers\MasterSSO;
+use Illuminate\Support\Facades\DB;
 
 class LoginSSOController extends Controller
 {
@@ -37,55 +38,110 @@ class LoginSSOController extends Controller
                 */
                 try
                 {
-                    // validate user name password
-                    /*$response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
-                    array(
-                        'chId' => 'Eiken Google',
-                        'invoke' => 'getLoginUsrPass',
-                        'username' => $shortUsername,
-                        'password' => $password ));
-                        
-                    $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
-                    $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
-                    if($validateResult == "Sukses")
+                    //$userInfo = DB::select('select * from bbuser where username = ?', $shortUsername);
+                    $userInfo = DB::select('select * from bbuser where username = ?', array('AG161790'));
+                    if(count($userInfo) > 0)
                     {
-                        $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                        $userId = $userInfo[0]->userid;
+                        $username = $userInfo[0]->username;
+                        $kodeKantor = $userInfo[0]->kode_kantor;
+                        $name = $userInfo[0]->nama_lengkap;
+                        $nik = $userInfo[0]->nik;
+                        $email = $userInfo[0]->email;
+                        $lastLogin = date('Y-m-d');
+                        $divisi = $userInfo[0]->divisi;
+                        $jabatan = $userInfo[0]->jabatan;
+                        $userType = $userInfo[0]->usergroupid;
+                        $avatarLink = $userInfo[0]->avatar;
+                        $avatarDateline = $userInfo[0]->avatar_dateline;
+                    }
+                    else
+                    {
+                        // validate user name password
+                        /*$response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
                         array(
                             'chId' => 'Eiken Google',
-                            'invoke' => 'getUserLoginInfo',
-                            'kodeUser' => $shortUsername));
+                            'invoke' => 'getLoginUsrPass',
+                            'username' => $shortUsername,
+                            'password' => $password ));
+                            
                         $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
                         $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
                         if($validateResult == "Sukses")
                         {
-                            // TODO : set session info
+                            $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                            array(
+                                'chId' => 'Eiken Google',
+                                'invoke' => 'getUserLoginInfo',
+                                'kodeUser' => $shortUsername));
+                            $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
+                            $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
+                            if($validateResult == "Sukses")
+                            {
+                                // TODO : set session info
+                            }
+                            else
+                            {
+                                // TODO : what to do when sso succeed, but return error from BPJS api
+                            }
                         }
                         else
                         {
                             // TODO : what to do when sso succeed, but return error from BPJS api
+                        }*/
+
+                        $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                        array(
+                            'chId' => 'Eiken Google',
+                            'invoke' => 'getLoginUsrPass',
+                            'username' => 'AG161790',
+                            'password' => 'WELCOME1'));
+                            
+                        $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
+                        $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
+                        if($validateResult == "Sukses")
+                        {
+                            $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                            array(
+                                'chId' => 'Eiken Google',
+                                'invoke' => 'getUserLoginInfo',
+                                'kodeUser' => $shortUsername));
+                            $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
+                            $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
+                            if($validateResult == "Sukses")
+                            {
+                                // TODO : set session info
+                                /*
+                                $id = $resultWS2['return']->kodeUser;
+                                $kode_kantor = $resultWS2['return']->kodeKantor;
+                                $username = $resultWS2['return']->kodeUser;
+                                $nama_user = $resultWS2['return']->namaUser;
+                                $nik = $resultWS2['return']->npk;
+                                $email = $resultWS2['return']->email;
+                                $last_login = date('d-m-Y');
+                                $divisi = $resultWS2['return']->roleJabatan;
+                                $jabatan = $resultWS2['return']->jabatanPegawai;
+                                */
+                            }
+                            else
+                            {
+                                $data = $this->_authcheck($request);
+                                return view('login', ['logindata' => $data, 'loginMessage' => 'Login Failed!']);
+                            }
+                        }
+                        else
+                        {
+                            $data = $this->_authcheck($request);
+                            return view('login', ['logindata' => $data, 'loginMessage' => 'Login Failed!']);
                         }
                     }
-                    else
-                    {
-                        // TODO : what to do when sso succeed, but return error from BPJS api
-                    }*/
                     
                     return view('autosubmit', $samlResponse);
                 }
                 catch (Exception $e)
                 {
-                    // TODO : handle something
                     throw $e;
                 }
-
-                // TODO: move this to page which called by redirect script
-                // -------------------------------------------------------
-                /*$authUrl = "auth/google";
-                $isOauthValid = session("OAUTH_VALID");
-                $isOauthValid = false;
-                session(["OAUTH_VALID" => $isOauthValid]);
-                return redirect($authUrl);*/
-                // -------------------------------------------------------
             }
 
             $data = $this->_authcheck($request);
