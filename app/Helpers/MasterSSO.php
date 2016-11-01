@@ -96,7 +96,7 @@ GlOz0dzLCotJBvnlL2+Q4nfrbZN7GvQQjdI4qs8Q0hv0
                 {
                     if($childnode->hasAttributes())
                     {
-                        $authnrequest[$childnode->nodeName]=array();
+                        $authnrequest[$childnode->nodeName] = array();
                         foreach($childnode->attributes as $attr)
                         {
                             $authnrequest[$childnode->nodeName][$attr->name] = $attr->value;
