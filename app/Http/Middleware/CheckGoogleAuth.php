@@ -92,10 +92,19 @@ class CheckGoogleAuth
             }
             catch (Exception $e)
             {
-                if ($request->path() != $authUrl)
-                {
-                    return redirect($authUrl);
-                }
+                $isSSOAuthenticated = false;
+                session(["SSO_AUTH" => $isSSOAuthenticated]);
+
+                $isLoginValidateIMAP = false;
+                session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+
+                $isOauthValid = false;
+                session(["OAUTH_VALID" => $isOauthValid]);
+                session(["access_token" => ""]);
+                session()->flush();
+
+                $logoutUrl = 'https://accounts.google.com/Logout';
+                return redirect($logoutUrl);
             }
         }
         

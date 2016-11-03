@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Helpers\MasterSSO;
 use Illuminate\Support\Facades\DB;
+use CurlAn;
 
 class LoginSSOController extends Controller
 {
@@ -29,6 +30,8 @@ class LoginSSOController extends Controller
 
             if($resultSSOCheck)
             {
+                session(['loggedinusername' => $shortUsername]);
+
                 $authenticationGoogle   = session('authenticationGoogle');
                 $samlResponse = $mastersso->getSAMLResponse($authenticationGoogle['SAMLRequest'], $username);
                 $samlResponse['RelayState'] = $authenticationGoogle['RelayState'];
@@ -52,8 +55,12 @@ class LoginSSOController extends Controller
                         $divisi = $userInfo[0]->divisi;
                         $jabatan = $userInfo[0]->jabatan;
                         $userType = $userInfo[0]->usergroupid;
+
+                        session(['loggedinfullname' => $name]);
                         /*$avatarLink = $userInfo[0]->avatar;
                         $avatarDateline = $userInfo[0]->avatar_dateline;*/
+
+                        // TODO: call ws to set session
                     }
                     else
                     {
@@ -110,18 +117,54 @@ class LoginSSOController extends Controller
                             $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
                             if($validateResult == "Sukses")
                             {
-                                // TODO : set session info
-                                /*
-                                $id = $resultWS2['return']->kodeUser;
-                                $kode_kantor = $resultWS2['return']->kodeKantor;
-                                $username = $resultWS2['return']->kodeUser;
-                                $nama_user = $resultWS2['return']->namaUser;
-                                $nik = $resultWS2['return']->npk;
-                                $email = $resultWS2['return']->email;
+                                // Get user info
+                                $id = str_replace('"', '', explode(':', $result[8])[1]);
+                                $kode_kantor = str_replace('"', '', explode(':', $result[7])[1]);
+                                $username = $id;
+                                $nama_user = str_replace('"', '', explode(':', $result[10])[1]);
+                                $nik = str_replace('"', '', explode(':', $result[11])[1]);
+                                $email = str_replace('"', '', explode(':', $result[5])[1]);
                                 $last_login = date('d-m-Y');
-                                $divisi = $resultWS2['return']->roleJabatan;
-                                $jabatan = $resultWS2['return']->jabatanPegawai;
-                                */
+                                $divisi = str_replace('"', '', explode(':', $result[12])[1]);
+                                $jabatan = str_replace('"', '', explode(':', $result[6])[1]);
+
+                                $response = CurlAn::jsonPost('http://es.bpjsketenagakerjaan.go.id:8049/wscom/svc.json',
+                                array(
+                                    'chId' => 'Eiken Google',
+                                    'invoke' => 'getListUserFungsi',
+                                    'kodeUser' => $id,
+                                    'kodeKantor' => 0));
+                                $result = explode(',',str_replace('}','',str_replace('{','',$response->body)));
+                                $validateResult = str_replace('"', '', explode(':', $result[3])[1]);
+                                if($validateResult == "Sukses")
+                                {
+                                    if(str_replace('"', '', explode(':', $result[5])[0]) == "userFungsiObj")
+                                    {
+                                        $fungsi = explode(' - ', str_replace('"', '', explode(':', $result[8])[1]));
+                                        $divisi = $fungsi[1];
+                                        $jabatan = $fungsi[0];
+                                    }
+                                    else
+                                    {
+                                        $fungsi = explode(' - ', str_replace('"', '', explode(':', $result[7])[1]));
+                                        $divisi = $fungsi[1];
+                                        $jabatan = $fungsi[0];
+                                    }
+                                }
+
+                                // Insert into bbuser
+                                $token = '$2y$10$ruD3EqfvR8Cxh4VHU48yiuvFUp8icmkPQVX4HVdAxh1TNS3seLerm';
+                                $secret = "l,zPm>\'&C.xKKfU;B-aqb>?l,%B%1";
+                                $sql_insert = "INSERT INTO `bbuser`(usergroupid,username,token,scheme,secret,new_password,passworddate,email,usertitle,
+                                               divisi,jabatan,kode_kantor,nama_lengkap,nik,showvbcode,joindate,lastvisit,lastactivity,ipaddress)
+                                               VALUES(2,'{$username}','{$token}','blowfish:10','{$secret}','".md5($password)."','".date('Y-m-d').
+                                               "','{$email}','Newbie','{$divisi}','{$jabatan}','{$kode_kantor}','{$nama_user}','{$nik}',1,
+                                               {$last_login},{$last_login},{$last_login},'".Request::ip()."')";
+                                DB::insert($sql_insert);
+
+                                session(['loggedinfullname' => $nama_user]);
+
+                                // TODO: call ws to set session
                             }
                             else
                             {
