@@ -52,8 +52,8 @@ class LoginSSOController extends Controller
                         $divisi = $userInfo[0]->divisi;
                         $jabatan = $userInfo[0]->jabatan;
                         $userType = $userInfo[0]->usergroupid;
-                        $avatarLink = $userInfo[0]->avatar;
-                        $avatarDateline = $userInfo[0]->avatar_dateline;
+                        /*$avatarLink = $userInfo[0]->avatar;
+                        $avatarDateline = $userInfo[0]->avatar_dateline;*/
                     }
                     else
                     {
@@ -170,7 +170,7 @@ class LoginSSOController extends Controller
         $domain = config('sso.primarydomain');
         //$url_location           = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
         $url_location = "https://script.google.com/a/macros/gedu.demo.eikontechnology.com/s/AKfycbzV0Lp2NJwG_7flcAQWJUDwo94NanIqI4Vm4iOO-f0EHsaUUO4/exec";
-        $authenticationGoogle   = session('authenticationGoogle');
+        $authenticationGoogle = session('authenticationGoogle');
         
         if(empty($authenticationGoogle))
         {
