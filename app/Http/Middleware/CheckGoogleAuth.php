@@ -92,19 +92,29 @@ class CheckGoogleAuth
             }
             catch (Exception $e)
             {
-                $isSSOAuthenticated = false;
-                session(["SSO_AUTH" => $isSSOAuthenticated]);
+				if ($isLoginValidateIMAP)
+				{
+					if ($request->path() != $authUrl)
+					{
+						return redirect($authUrl);
+					}
+				}
+				else
+				{
+					$isSSOAuthenticated = false;
+					session(["SSO_AUTH" => $isSSOAuthenticated]);
 
-                $isLoginValidateIMAP = false;
-                session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
+					$isLoginValidateIMAP = false;
+					session(['LOGIN_VALIDATE_IMAP' => $isLoginValidateIMAP]);
 
-                $isOauthValid = false;
-                session(["OAUTH_VALID" => $isOauthValid]);
-                session(["access_token" => ""]);
-                session()->flush();
+					$isOauthValid = false;
+					session(["OAUTH_VALID" => $isOauthValid]);
+					session(["access_token" => ""]);
+					session()->flush();
 
-                $logoutUrl = 'https://accounts.google.com/Logout';
-                return redirect($logoutUrl);
+					$logoutUrl = 'https://accounts.google.com/Logout';
+					return redirect($logoutUrl);
+				}
             }
         }
         
