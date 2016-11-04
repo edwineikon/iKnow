@@ -161,7 +161,6 @@ class LoginSSOController extends Controller
                                                "','{$email}','Newbie','{$divisi}','{$jabatan}','{$kode_kantor}','{$nama_user}','{$nik}',1,
                                                {$last_login},{$last_login},{$last_login},'".Request::ip()."')";
                                 DB::insert($sql_insert);
-
                                 session(['loggedinfullname' => $nama_user]);
 
                                 // TODO: call ws to set session
