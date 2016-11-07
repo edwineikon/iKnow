@@ -210,13 +210,12 @@ class LoginSSOController extends Controller
     protected function _authcheck(Request $request)
     {
         $domain = config('sso.primarydomain');
-        //$url_location           = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
+        //$url_location = "https://mail.google.com/a/" . $domain; // TODO: change into script redirect
         $url_location = "https://script.google.com/a/macros/gedu.demo.eikontechnology.com/s/AKfycbzV0Lp2NJwG_7flcAQWJUDwo94NanIqI4Vm4iOO-f0EHsaUUO4/exec";
         $authenticationGoogle = session('authenticationGoogle');
         
         if(empty($authenticationGoogle))
         {
-            //print_r($_GET);exit;
             if(empty($request->input('SAMLRequest')) || empty($request->input('RelayState')))
             {
                 return redirect($url_location);
