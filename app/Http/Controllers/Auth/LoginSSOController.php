@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Helpers\MasterSSO;
-use Illuminate\Support\Facades\DB;
 use CurlAn;
 
 class LoginSSOController extends Controller

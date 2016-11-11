@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use \Exception;
 use Illuminate\Http\Request;
 use App\Helpers\GoogleClientWrapper;
-use \Exception;
 use CurlAn;
 
 class PlusDomainController extends Controller
 {
     public function index()
     {
-        // TODO: fetch google plus activity data
-        
-        return view('plusdomain.timeline', ['activities' => null]);
+        return view('plusdomain.timeline');
+    }
+
+    public function getActivities($page=0, $pageSize=10)
+    {
+        $access_token = session('access_token');
+        $googleWrapper = new GoogleClientWrapper($access_token);
+        return $googleWrapper->getActivities($page, $pageSize);
     }
 
     public function newPost(Request $request)
@@ -36,5 +41,11 @@ class PlusDomainController extends Controller
         $postResult = $googleWrapper->createActivity($request, $mediaId, $mediaType);
 
         return redirect('+/home');
+    }
+
+    public function newCircle(Request $request)
+    {
+        $access_token = session('access_token');
+        $googleWrapper = new GoogleClientWrapper($access_token);
     }
 }

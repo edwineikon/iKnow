@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
-use PulkitJalan\Google\Client;
 use \Exception;
+use PulkitJalan\Google\Client;
 use Socialite;
+use Closure;
 
 class CheckGoogleAuth
 {
