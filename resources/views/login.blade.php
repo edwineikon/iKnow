@@ -1,4 +1,4 @@
-@extends('shared.layoutwithoutnavbar')
+@extends('shared.layoutlogin')
 @section('title', 'Login')
 @section('content')
 <div class="container">
@@ -10,7 +10,7 @@
 			<form action="{{ url('login') }}" method="post">
 				<input type="hidden" name="_token" value="{{ csrf_token() }}">
 				<div class="">
-					<img src="public/img/bpjs_logo600x140.png" class="img-responsive" alt="Cinque Terre">
+					<img src="public/img/bpjstk_logo600x140.png" class="img-responsive" alt="Cinque Terre">
 				</div>
 				</br></br>
 				<div class="input-group">				
