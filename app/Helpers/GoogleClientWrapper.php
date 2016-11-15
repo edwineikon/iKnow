@@ -24,17 +24,22 @@ class GoogleClientWrapper {
 
     public function getCurrentUserId()
     {
-        $user = Socialite::driver('google')->user();
-        return $user-id;
+        try
+        {
+            $user = $this->service->people->get('me');
+            return $user->id;
+        }
+        catch (Exception $e)
+        {
+            throw $e;
+        }
     }
     
     public function getActivities($page = 0, $pageSize = 10)
     {
         try
         {
-            //$this->service = $this->client->make('plusDomains');
-            $user = Socialite::driver('google')->user();
-            $userId = $user->id;
+            $userId = $this->getCurrentUserId();
 
             $result = array();
             $recordCount = DB::select('SELECT COUNT(*) AS TotalRecord FROM (
@@ -175,10 +180,9 @@ class GoogleClientWrapper {
 
             //$this->service = $this->client->make('plusDomains');
             $result = $this->service->activities->insert('me', $activity);
-
-            $user = Socialite::driver('google')->user();
+            
             $activityId = $result->id;
-            $userId = $user->id;
+            $userId = $this->getCurrentUserId();
             $dbUserId = DB::select("SELECT id AS DbId FROM gplus_user WHERE userid=?", array($userId))[0]->DbId;
             $lastActId = DB::table('gplus_activity')->insertGetId(
                 ['activityid' => $activityId, userid => $dbUserId]
@@ -205,13 +209,16 @@ class GoogleClientWrapper {
         $result = array();
 
         $user = DB::table('gplus_user')->where('userid', $userid)->first();
-        $dbUserId = $user->id;
-
-        $circles = DB::table('gplus_circle')->where('userid', $dbUserId);
-        foreach ($circles as $circle)
+        if($user)
         {
-            $currentCircle = getCircle($circle->circleid);
-            $result[] = $currentCircle;
+            $dbUserId = $user->id;
+
+            $circles = DB::table('gplus_circle')->where('userid', $dbUserId);
+            foreach ($circles as $circle)
+            {
+                $currentCircle = getCircle($circle->circleid);
+                $result[] = $currentCircle;
+            }
         }
 
         return $result;
@@ -232,9 +239,8 @@ class GoogleClientWrapper {
             
             //$this->service = $this->client->make('plusDomains');
             $result = $this->service->circles->insert('me', $circle);
-
-            $user = Socialite::driver('google')->user();
-            $userId = $user->id;
+            
+            $userId = $this->getCurrentUserId();
             $dbUserId = DB::select("SELECT id AS DbId FROM gplus_user WHERE userid=?", array($userId))[0]->DbId;
             $circleId = DB::table('gplus_circle')->insertGetId([
                 ['circleid' => $result->id, 'userid' => $dbUserId]

@@ -67,7 +67,7 @@ class CheckGoogleAuth
             try
             {
                 $access_token = session('access_token');
-                if(!empty($access_token))
+                /*if(!empty($access_token))
                 {
                     $config = config('google');
                     $client = new Client($config);
@@ -88,7 +88,13 @@ class CheckGoogleAuth
                     $client->setAccessToken($access_token);
                     $service_plus = $client->make('plusDomains');
                     $service_plus->people->get('me');
-                }
+                }*/
+                $config = config('google');
+                $client = new Client($config);
+                $client->authorize();
+                $client->setAccessToken($access_token);
+                $service_plus = $client->make('plusDomains');
+                $service_plus->people->get('me');
             }
             catch (Exception $e)
             {
