@@ -21,6 +21,12 @@ class GoogleClientWrapper {
         $this->client->setAccessToken($accessToken);
         $this->service = $this->client->make('plusDomains');
     }
+
+    public function getCurrentUserId()
+    {
+        $user = Socialite::driver('google')->user();
+        return $user-id;
+    }
     
     public function getActivities($page = 0, $pageSize = 10)
     {
@@ -31,39 +37,48 @@ class GoogleClientWrapper {
             $userId = $user->id;
 
             $result = array();
-            $recordCount = DB::select('SELECT count(*) AS TotalRecord FROM gplusd_activity WHERE flag=1')[0]->TotalRecord;
+            $recordCount = DB::select('SELECT COUNT(*) AS TotalRecord FROM (
+                                        SELECT a.id, a.userid, a.activityid, a.flag
+                                        FROM gplus_activity a INNER JOIN gplus_user b ON a.userid = b.id
+                                        WHERE b.userid = ? AND a.flag = 1
+                                        UNION
+                                        SELECT id, userid, activityid, flag
+                                        FROM gplus_activity
+                                        WHERE userid IN
+                                        (
+                                            SELECT c.userid
+                                            FROM gplus_activity_circle a
+                                            INNER JOIN gplus_circle b ON a.circleid = b.id
+                                            INNER JOIN gplus_circle_detail c ON b.id = c.circleid
+                                            WHERE a.activityid = activityid
+                                        ) AND flag = 1
+                                    ) ut')[0]->TotalRecord;
             $totalPage = 0;
             if($recordCount > 0)
             {
                 $totalPage = ceil(($recordCount/$pageSize));
             }
 
-            $activities = DB::select('SELECT activityid, userid, flag FROM gplusd_activity WHERE flag=1 LIMIT ?,?', array($page, $pageSize));
+            $activities = DB::select('SELECT id, userid, activityid, flag FROM (
+                                        SELECT a.id, a.userid, a.activityid, a.flag
+                                        FROM gplus_activity a INNER JOIN gplus_user b ON a.userid = b.id
+                                        WHERE b.userid = ? AND a.flag = 1
+                                        UNION
+                                        SELECT id, userid, activityid, flag
+                                        FROM gplus_activity
+                                        WHERE userid IN
+                                        (
+                                            SELECT c.userid
+                                            FROM gplus_activity_circle a
+                                            INNER JOIN gplus_circle b ON a.circleid = b.id
+                                            INNER JOIN gplus_circle_detail c ON b.id = c.circleid
+                                            WHERE a.activityid = activityid
+                                        ) AND flag = 1
+                                    ) ut LIMIT ?,?;', array($userId, $page, $pageSize));
             foreach ($activities as $act)
             {
                 $currentAct = $this->getActivity($act->activityid);
-                if ($act->userid == $userId)
-                {
-                    $result[] = $currentAct;
-                }
-                else
-                {
-                    $listPeopleResult = $this->service->people->listByActivity($act->activityid, 'sharedto');
-
-                    foreach ($listPeopleResult->items as $people)
-                    {
-                        if($people->userId == $userId)
-                        {
-                            $result[] = $currentAct;
-                            break;
-                        }
-                    }
-
-                    if(!empty($listPeopleResult->nextPageToken))
-                    {
-                        $this->recursiveListPeopleByActivity($act->activityid, $userId, $result, $listPeopleResult->nextPageToken);
-                    }
-                }
+                $result[] = $currentAct;
             }
 
             /*$this->service = $this->client->make('plusDomains');
@@ -75,26 +90,6 @@ class GoogleClientWrapper {
         catch (Exception $e)
         {
             throw $e;
-        }
-    }
-
-    protected function recursiveListPeopleByActivity($activityId, $userId, $result, $pageToken = "")
-    {
-        //$this->service = $this->client->make('plusDomains');
-        $currentAct = $this->getActivity($activityId);
-        $listPeopleResult = $this->service->people->listByActivity($activityId, 'sharedto', array('pageToken' => $pageToken));
-        foreach ($listPeopleResult->items as $people)
-        {
-            if($people->userId == $userId)
-            {
-                $result[] = $currentAct;
-                break;
-            }
-
-            if(!empty($listPeopleResult->nextPageToken))
-            {
-                $this->recursiveListPeopleByActivity($activityId, $userId, $result, $listPeopleResult->nextPageToken);
-            }
         }
     }
 
@@ -184,7 +179,18 @@ class GoogleClientWrapper {
             $user = Socialite::driver('google')->user();
             $activityId = $result->id;
             $userId = $user->id;
-            DB::insert("INSERT INTO gplusd_activity (activityid, userid) VALUES (?, ?)", array($activityId, $userId));
+            $dbUserId = DB::select("SELECT id AS DbId FROM gplus_user WHERE userid=?", array($userId))[0]->DbId;
+            $lastActId = DB::table('gplus_activity')->insertGetId(
+                ['activityid' => $activityId, userid => $dbUserId]
+            );
+
+            $activityCircles = array();
+
+            /*DB::table('gplus_activity_circle')->insert([
+                ['email' => 'taylor@example.com', 'votes' => 0],
+                ['email' => 'dayle@example.com', 'votes' => 0]
+            ]);*/
+            DB::table('gplus_activity_circle')->insert($activityCircles);
 
             return $result;
         }
@@ -192,6 +198,29 @@ class GoogleClientWrapper {
         {
             throw $e;
         }
+    }
+
+    public function retrieveCirclesForUser($userid)
+    {
+        $result = array();
+
+        $user = DB::table('gplus_user')->where('userid', $userid)->first();
+        $dbUserId = $user->id;
+
+        $circles = DB::table('gplus_circle')->where('userid', $dbUserId);
+        foreach ($circles as $circle)
+        {
+            $currentCircle = getCircle($circle->circleid);
+            $result[] = $currentCircle;
+        }
+
+        return $result;
+    }
+
+    public function getCircle($circleId)
+    {
+        $result = $this->service->circles->get($circleId);
+        return $result;
     }
 
     public function createCircle(Request $request)
@@ -204,7 +233,14 @@ class GoogleClientWrapper {
             //$this->service = $this->client->make('plusDomains');
             $result = $this->service->circles->insert('me', $circle);
 
-            return $result;
+            $user = Socialite::driver('google')->user();
+            $userId = $user->id;
+            $dbUserId = DB::select("SELECT id AS DbId FROM gplus_user WHERE userid=?", array($userId))[0]->DbId;
+            $circleId = DB::table('gplus_circle')->insertGetId([
+                ['circleid' => $result->id, 'userid' => $dbUserId]
+            ]);
+
+            return $circleId;
         }
         catch (Exception $e)
         {
@@ -234,6 +270,7 @@ class GoogleClientWrapper {
         {
             //$this->service = $this->client->make('plusDomains');
             $result = $this->service->circles->remove($circleId);
+            DB::table('gplus_circle')->where('circleid', $circleId)->delete();
 
             return true;
         }
@@ -247,10 +284,16 @@ class GoogleClientWrapper {
     {
         try
         {
+            $realCircleId = DB::table('gplus_circle')->where('id', $request->input('circleId'))->first()->circleid;
             //$this->service = $this->client->make('plusDomains');
-            $result = $this->service->circles->addPeople($request->input('circleId'),
+            $result = $this->service->circles->addPeople($realCircleId,
                 array("email" => $request->input('txtEmail'),
-                       "userId" => $request->input('optUser')));
+                      "userId" => $request->input('optUser')));
+            
+            $userId = DB::table('gplus_user')->where('userid', $request->input('optUser'))->first()->id;
+            DB::table('gplus_activity_circle')->insert([
+                ['userid' => $userId, 'circleId' => $request->input('circleId')]
+            ]);
 
             return $result;
         }
@@ -267,7 +310,13 @@ class GoogleClientWrapper {
             //$this->service = $this->client->make('plusDomains');
             $result = $this->service->circles->removePeople($circleId,
                 array("email" => $userId,
-                       "userId" => $email));
+                      "userId" => $email));
+            $dbCircleId = DB::table('gplus_circle')->where('circleid', $circleId)->first()->id;
+            $dbUserId = DB::table('gplus_user')->where('userid', $userId)->first()->id;
+            DB::table('gplus_circle_detail')->where([
+                ['circleid', '=', $dbCircleId],
+                ['userid', '=', $dbUserId]
+            ])->delete();
 
             return $result;
         }

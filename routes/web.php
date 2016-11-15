@@ -38,8 +38,5 @@ Route::pattern('newpost', '(?i)newpost(?-i)');
 */
 Route::get('/', 'HomeController@index')->middleware('checkgoogleauth')->name('dashboard');
 Route::get('+/{home}', 'PlusDomainController@index')->middleware('checkgoogleauth')->name('plustimeline');
-Route::get('+/{newpost}', function()
-{
-    return View::make('plusdomain.newPost');
-})->middleware('checkgoogleauth');
+Route::get('+/{newpost}', 'PlusDomainController@newPostLoad')->middleware('checkgoogleauth');
 Route::post('+/{newpost}', 'PlusDomainController@newPost')->middleware('checkgoogleauth');

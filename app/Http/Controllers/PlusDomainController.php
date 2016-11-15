@@ -21,6 +21,16 @@ class PlusDomainController extends Controller
         return $googleWrapper->getActivities($page, $pageSize);
     }
 
+    public function newPostLoad()
+    {
+        $access_token = session('access_token');
+        $googleWrapper = new GoogleClientWrapper($access_token);
+        $userId = $googleWrapper->getCurrentUserId();
+        $listCircles = $googleWrapper->retrieveCirclesForUser($userId);
+
+        return view('plusdomain.newPost', ['circles' => $listCircles]);
+    }
+
     public function newPost(Request $request)
     {
         $access_token = session('access_token');
